@@ -15,6 +15,77 @@ double calc_time(struct timespec start, struct timespec end) {
   }
 }
 
+// 1) Receive a new raindrop (if it is still raining) for each point.
+// 2) If there are raindrops on a point, absorb water into the point
+// 3a) Calculate the number of raindrops that will next trickle to the
+// lowest neighbor(s)
+void rainAbsorbTrickle(vector<vector<float>> &rain,
+                       vector<vector<float>> &absorb,
+                       vector<vector<float>> &trickle, int &timeSteps,
+                       const int &absRate) {
+  for (int i = 0; i < rain.size(); ++i) {
+    for (int j = 0; j < rain[0].size(); ++j) {
+      if (timeSteps > 0) {
+        // 1) Receive a new raindrop (if it is still raining) for each point.
+        ++rain[i][j];
+      }
+      // 2) If there are raindrops on a point, absorb water into the point
+      if (rain[i][j] >= absRate) {
+        rain[i][j] -= absRate;
+        absorb[i][j] += absRate;
+      } else if (rain[i][j] > 0) {
+        absorb[i][j] += rain[i][j];
+        rain[i][j] = 0;
+      }
+      // 3a) Calculate the number of raindrops that will next trickle to the
+      // lowest neighbor(s)
+      if (rain[i][j] >= 1) {
+        trickle[i][j] = 1;
+      } else if (rain[i][j] > 0) {
+        trickle[i][j] = rain[i][j];
+      }
+    }
+  }
+}
+
+// Determin if the point is inside the ground
+bool validPoint(int i, int j, int N) {}
+
+// 3b) For each point, use the calculated number of raindrops that will
+// trickle to the lowest neighbor(s) to update the number of raindrops at
+// each lowest neighbor, if applicable.
+void calcTrickle(vector<vector<float>> &rain,
+                 const vector<vector<int>> &elevation,
+                 vector<vector<float>> &trickle) {}
+
+// Calculate the whole time steps needed to drain
+int calcRain(const vector<vector<int>> &elevation,
+             vector<vector<float>> &absorb, int timeSteps, float absRate) {
+  int N = elevation.size();
+  vector<vector<float>> rain(
+      N, vector<float>(N, 0)); // Store the current rain on the ground
+  int wholeSteps = 0;
+  int notDrain =
+      1; // Check if the groud has already drain, 1 means is not drain
+  while (notDrain) {
+    notDrain = 0;
+    vector<vector<float>> trickle(
+        N, vector<float>(N, 0)); // Store the trickle of each step
+    // 1) Receive a new raindrop (if it is still raining) for each point.
+    // 2) If there are raindrops on a point, absorb water into the point
+    // 3a) Calculate the number of raindrops that will next trickle to the
+    // lowest neighbor(s)
+    rainAbsorbTrickle(rain, absorb, trickle, timeSteps, absRate);
+    // 3b) For each point, use the calculated number of raindrops that will
+    // trickle to the lowest neighbor(s) to update the number of raindrops at
+    // each lowest neighbor, if applicable.
+    calcTrickle(rain, elevation, trickle);
+    --timeSteps;
+    ++wholeSteps;
+  }
+  return wholeSteps;
+}
+
 int main(int argc, char *argv[]) {
   if (argc != 5) {
     cout << "Syntax: ./rainfall_seq <M> <A> <N> <elevation_file>" << endl;
@@ -43,8 +114,9 @@ int main(int argc, char *argv[]) {
   string elevation_file = argv[4];
   float runtime;
   vector<vector<int>> elevation(N, vector<int>());
-  vector<vector<int>> absorb(N, vector<int>(N, 0));
+  vector<vector<float>> absorb(N, vector<float>(N, 0));
   struct timespec start_time, end_time;
+  int wholeSteps = 0; // Store the whole timesteps
 
   // open the file to read.
   fstream in("./" + elevation_file);
@@ -68,8 +140,12 @@ int main(int argc, char *argv[]) {
   }
   clock_gettime(CLOCK_MONOTONIC, &start_time);
 
+  wholeSteps = calcRain(elevation, absorb, timeSteps, absRate);
+
   clock_gettime(CLOCK_MONOTONIC, &end_time);
   float elapsed_ns = calc_time(start_time, end_time);
+  cout << "Rainfall simulation took "
+       << "time steps to complete." << endl;
   cout << "Runtime = " << elapsed_ns / 1000000000 << " seconds" << endl;
   return 0;
 }
