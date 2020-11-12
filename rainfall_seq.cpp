@@ -2,6 +2,19 @@
 
 using namespace std;
 
+// Used to calculate the run time
+double calc_time(struct timespec start, struct timespec end) {
+  double start_sec =
+      (double)start.tv_sec * 1000000000.0 + (double)start.tv_nsec;
+  double end_sec = (double)end.tv_sec * 1000000000.0 + (double)end.tv_nsec;
+
+  if (end_sec < start_sec) {
+    return 0;
+  } else {
+    return end_sec - start_sec;
+  }
+}
+
 int main(int argc, char *argv[]) {
   if (argc != 5) {
     cout << "Syntax: ./rainfall_seq <M> <A> <N> <elevation_file>" << endl;
@@ -31,6 +44,7 @@ int main(int argc, char *argv[]) {
   float runtime;
   vector<vector<int>> elevation(N, vector<int>());
   vector<vector<int>> absorb(N, vector<int>(N, 0));
+  struct timespec start_time, end_time;
 
   // open the file to read.
   fstream in("./" + elevation_file);
@@ -52,6 +66,10 @@ int main(int argc, char *argv[]) {
     cout << "No such elevation_file" << endl;
     return EXIT_FAILURE;
   }
+  clock_gettime(CLOCK_MONOTONIC, &start_time);
 
+  clock_gettime(CLOCK_MONOTONIC, &end_time);
+  float elapsed_ns = calc_time(start_time, end_time);
+  cout << "Runtime = " << elapsed_ns / 1000000000 << " seconds" << endl;
   return 0;
 }
