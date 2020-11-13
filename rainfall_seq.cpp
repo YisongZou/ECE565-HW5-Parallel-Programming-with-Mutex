@@ -29,6 +29,9 @@ void rainAbsorbTrickle(vector<vector<float>> &rain,
         // 1) Receive a new raindrop (if it is still raining) for each point.
         ++rain[i][j];
       }
+      if (rain[i][j] == 0) {
+        continue;
+      }
       // 2) If there are raindrops on a point, absorb water into the point
       if (rain[i][j] >= absRate) {
         rain[i][j] -= absRate;
@@ -39,6 +42,7 @@ void rainAbsorbTrickle(vector<vector<float>> &rain,
       }
       // 3a) Calculate the number of raindrops that will next trickle to the
       // lowest neighbor(s)
+      trickle[i][j] = 0; // Reset Trickle array
       if (rain[i][j] >= 1) {
         trickle[i][j] = 1;
       } else if (rain[i][j] > 0) {
@@ -92,13 +96,13 @@ vector<vector<int>> countNeighbor(int i, int j,
 // each lowest neighbor, if applicable.
 void calcTrickle(vector<vector<float>> &rain,
                  const vector<vector<int>> &elevation,
-                 vector<vector<float>> &trickle) {
+                 vector<vector<float>> &trickle,
+                 vector<vector<vector<vector<int>>>> &neighborsToTrickle) {
   vector<vector<int>> direct = {
       {0, -1}, {-1, 0}, {0, 1}, {1, 0}}; // Left, up, right, down
   for (int i = 0; i < rain.size(); ++i) {
     for (int j = 0; j < rain[0].size(); ++j) {
-      vector<vector<int>> neighToTrickle;
-      neighToTrickle = countNeighbor(i, j, elevation);
+      vector<vector<int>> neighToTrickle = neighborsToTrickle[i][j];
       if (neighToTrickle.size() == 0) { // No neighbor to trickle
         trickle[i][j] = 0;
         continue;
@@ -122,8 +126,15 @@ int calcRain(const vector<vector<int>> &elevation,
       N, vector<float>(N, 0)); // Store the current rain on the ground
   vector<vector<float>> trickle(
       N, vector<float>(N, 0)); // Store the trickle of each step
+  vector<vector<vector<vector<int>>>> neighborsToTrickle(
+      N, vector<vector<vector<int>>>(N, vector<vector<int>>()));
+  for (int i = 0; i < N; ++i) {
+    for (int j = 0; j < N; ++j) {
+      vector<vector<int>> neighToTrickle = countNeighbor(i, j, elevation);
+      neighborsToTrickle[i][j] = neighToTrickle;
+    }
+  }
   int wholeSteps = 0;
-
   float isDrain = 1;
 
   clock_gettime(CLOCK_MONOTONIC, &start_time);
@@ -139,7 +150,7 @@ int calcRain(const vector<vector<int>> &elevation,
     // 3b) For each point, use the calculated number of raindrops that will
     // trickle to the lowest neighbor(s) to update the number of raindrops
     // at each lowest neighbor, if applicable.
-    calcTrickle(rain, elevation, trickle);
+    calcTrickle(rain, elevation, trickle, neighborsToTrickle);
     --timeSteps;
     ++wholeSteps;
   }
