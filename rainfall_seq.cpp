@@ -39,6 +39,7 @@ void rainAbsorbTrickle(vector<vector<float>> &rain,
       } else if (rain[i][j] > 0) {
         absorb[i][j] += rain[i][j];
         rain[i][j] = 0;
+        continue;
       }
       // 3a) Calculate the number of raindrops that will next trickle to the
       // lowest neighbor(s)
