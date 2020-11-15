@@ -1,7 +1,5 @@
 #include "rainfall_pt.hpp"
 #include <bits/stdc++.h>
-// Thread Pool Library for c++
-#include "ctpl_stl.h"
 
 using namespace std;
 
