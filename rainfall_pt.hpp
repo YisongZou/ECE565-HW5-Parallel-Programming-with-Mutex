@@ -1,4 +1,6 @@
 #include <bits/stdc++.h>
+// Thread Pool Library for c++
+#include "ctpl_stl.h"
 
 using namespace std;
 
@@ -63,9 +65,14 @@ void calcTrickle(int i, int j) {
 // 3a) Calculate the number of raindrops that will next trickle to the
 // lowest neighbor(s)
 void rainAbsorbTrickle(int id) {
-  for (int i = id * rain.size() / numThreads;
-       i < (id + 1) * rain.size() / numThreads; ++i) {
-    for (int j = 0; j < rain[0].size(); ++j) {
+  for (int i = id * N / numThreads;
+       i < id * N / numThreads + int(ceil(float(N) / float(numThreads))); ++i) {
+    for (int j = (id * N * N / numThreads) % N;
+         j < N - ((id * N * N / numThreads) % N + N * N / numThreads) % N;
+         ++j) {
+      mtx.lock();
+      cout << "i j" << i << " " << j << endl;
+      mtx.unlock();
       // Add trickle from the previous step
       rain[i][j] += nextTrickle[i][j];
       // Reset the nextTrickle array
@@ -95,7 +102,7 @@ void rainAbsorbTrickle(int id) {
         trickle[i][j] = rain[i][j];
       }
       mtx.lock();
-      isDrain += trickle[i][j];
+      isDrain = isDrain + trickle[i][j];
       mtx.unlock();
       // 3b) For each point, use the calculated number of raindrops that will
       // trickle to the lowest neighbor(s) to update the number of raindrops
@@ -170,25 +177,27 @@ int calcRain() {
 
   isDrain = 1;
 
+  // Pre create the threads
+  ctpl::thread_pool p(numThreads); // numThreads threads total in the pool
+
   clock_gettime(CLOCK_MONOTONIC, &start_time);
 
   while (isDrain != 0) {
     isDrain = 0;
+    future<void> results[numThreads]; // To join all the threads
 
     // 1) Receive a new raindrop (if it is still raining) for each point.
     // 2) If there are raindrops on a point, absorb water into the point
     // 3a) Calculate the number of raindrops that will next trickle to the
     // lowest neighbor(s)
-    vector<thread> t;
+    cout << "----------------------------------" << wholeSteps << endl;
     for (int i = 0; i < numThreads; i++) {
-      std::thread th = std::thread([i]() { rainAbsorbTrickle(i); });
-      t.push_back(std::move(th)); //<=== move (after, th doesn't hold it anymore
+      results[i] = p.push(rainAbsorbTrickle);
     }
-
-    for (auto &th : t) { //<=== range-based for uses & reference
-      th.join();
+    for (int i = 0; i < numThreads; i++) {
+      results[i].wait(); // synchronize all threads
     }
-
+    cout << "----------------------------------" << endl;
     nextTrickle = tempTrickle;
     tempTrickle = resetTrickle;
     --timeSteps;
