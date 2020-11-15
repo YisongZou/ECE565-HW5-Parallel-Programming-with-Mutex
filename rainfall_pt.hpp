@@ -27,6 +27,7 @@ extern vector<vector<float>> resetTrickle; // Used for resetting the tempTrickle
 extern vector<vector<vector<vector<int>>>> neighborsToTrickle;
 extern float isDrain;
 extern int ID; // thread id
+extern bool notDrain;
 
 // Used to calculate the run time
 double calc_time(struct timespec start, struct timespec end) {
@@ -44,7 +45,7 @@ double calc_time(struct timespec start, struct timespec end) {
 // 3b) For each point, use the calculated number of raindrops that will
 // trickle to the lowest neighbor(s) to update the number of raindrops at
 // each lowest neighbor, if applicable.
-void calcTrickle(int i, int j) {
+void calcTrickle(int i, int j, int threadId) {
   if (trickle[i][j] == 0 || neighborsToTrickle[i][j].size() == 0) {
     return;
   }
@@ -53,11 +54,18 @@ void calcTrickle(int i, int j) {
 
   float share = trickle[i][j] / neighborsToTrickle[i][j].size();
   rain[i][j] -= trickle[i][j];
-
   for (auto n : neighborsToTrickle[i][j]) {
-    mtx.lock();
+    if (i == threadId * N / numThreads ||
+        i == threadId * N / numThreads +
+                 int(ceil(float(N) / float(numThreads))) - 1) {
+      mtx.lock(); // Only lock on edge
+    }
     tempTrickle[i + direct[n[1]][0]][j + direct[n[1]][1]] += share;
-    mtx.unlock();
+    if (i == threadId * N / numThreads ||
+        i == threadId * N / numThreads +
+                 int(ceil(float(N) / float(numThreads))) - 1) {
+      mtx.unlock(); // Only lock on edge
+    }
   }
 }
 
@@ -104,14 +112,17 @@ void rainAbsorbTrickle(int id, int threadId) {
       } else if (rain[i][j] > 0) {
         trickle[i][j] = rain[i][j];
       }
-      mtx.lock();
-      isDrain = isDrain + trickle[i][j];
-      mtx.unlock();
+      // mtx.lock();
+      if (trickle[i][j] > 0) {
+        notDrain = true;
+      }
+      // mtx.unlock();
       // 3b) For each point, use the calculated number of raindrops that will
       // trickle to the lowest neighbor(s) to update the number of raindrops
       // at each lowest neighbor, if applicable.
-      // calcTrickle(rain, elevation, trickle, neighborsToTrickle, nextTrickle);
-      calcTrickle(i, j);
+      // calcTrickle(rain, elevation, trickle, neighborsToTrickle,
+      // nextTrickle);
+      calcTrickle(i, j, threadId);
     }
   }
 }
@@ -178,15 +189,15 @@ int calcRain() {
   }
   int wholeSteps = 0;
 
-  isDrain = 1;
+  notDrain = true;
 
   // Pre create the threads
   ctpl::thread_pool p(numThreads); // numThreads threads total in the pool
 
   clock_gettime(CLOCK_MONOTONIC, &start_time);
 
-  while (isDrain != 0) {
-    isDrain = 0;
+  while (notDrain) {
+    notDrain = false;
     future<void> results[numThreads]; // To join all the threads
 
     // 1) Receive a new raindrop (if it is still raining) for each point.

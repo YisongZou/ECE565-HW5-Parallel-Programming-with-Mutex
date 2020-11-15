@@ -28,6 +28,7 @@ vector<vector<float>> resetTrickle; // Used for resetting the tempTrickle
 vector<vector<vector<vector<int>>>> neighborsToTrickle;
 float isDrain;
 int ID; // thread id
+bool notDrain;
 
 int main(int argc, char *argv[]) {
   if (argc != 6) {

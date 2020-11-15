@@ -2,6 +2,7 @@
     "files.associations": {
         "iostream": "cpp",
         "thread": "cpp",
-        "future": "cpp"
+        "future": "cpp",
+        "atomic": "cpp"
     }
 }
