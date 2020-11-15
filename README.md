@@ -5,7 +5,9 @@ the library in rainfall_pt.cpp and use it to pre create threads
 ```
 
 ```
-Sequential Version: rainfall_seq, time for 4096x4096: 259.656s
+Sequential Version: rainfall_seq
+Time for 4096x4096: 259.656s
+
 Parallel Version: rainfall_pt
 ```
 
