@@ -2,9 +2,30 @@
 // Thread Pool Library for c++
 #include "ctpl_stl.h"
 
-extern pthread_mutex_t mtx; // locks access
-
 using namespace std;
+
+extern mutex mtx; // locks access to counter
+
+// Declaration of variables
+extern int numThreads;
+extern int timeSteps;
+extern float absRate;
+extern int N;
+extern string elevation_file;
+extern float runtime;
+extern vector<vector<int>> elevation;
+extern vector<vector<float>> absorb;
+extern struct timespec start_time, end_time;
+extern int wholeSteps;                // Store the whole timesteps
+extern vector<vector<float>> rain;    // Store the current rain on the ground
+extern vector<vector<float>> trickle; // Store the trickle of each step
+extern vector<vector<float>>
+    nextTrickle; // Store the trickle result to be added next round
+extern vector<vector<float>>
+    tempTrickle; // Store the trickle result to be added next round
+extern vector<vector<float>> resetTrickle; // Used for resetting the tempTrickle
+extern vector<vector<vector<vector<int>>>> neighborsToTrickle;
+extern float isDrain;
 
 // Used to calculate the run time
 double calc_time(struct timespec start, struct timespec end) {
@@ -22,11 +43,7 @@ double calc_time(struct timespec start, struct timespec end) {
 // 3b) For each point, use the calculated number of raindrops that will
 // trickle to the lowest neighbor(s) to update the number of raindrops at
 // each lowest neighbor, if applicable.
-void calcTrickle(int i, int j, vector<vector<float>> &rain,
-                 const vector<vector<int>> &elevation,
-                 vector<vector<float>> &trickle,
-                 vector<vector<vector<vector<int>>>> &neighborsToTrickle,
-                 vector<vector<float>> &tempTrickle) {
+void calcTrickle(int i, int j) {
   if (trickle[i][j] == 0 || neighborsToTrickle[i][j].size() == 0) {
     return;
   }
@@ -35,10 +52,11 @@ void calcTrickle(int i, int j, vector<vector<float>> &rain,
 
   float share = trickle[i][j] / neighborsToTrickle[i][j].size();
   rain[i][j] -= trickle[i][j];
+
   for (auto n : neighborsToTrickle[i][j]) {
-    pthread_mutex_lock(&mtx);
+    mtx.lock();
     tempTrickle[i + direct[n[1]][0]][j + direct[n[1]][1]] += share;
-    pthread_mutex_unlock(&mtx);
+    mtx.unlock();
   }
 }
 
@@ -46,18 +64,13 @@ void calcTrickle(int i, int j, vector<vector<float>> &rain,
 // 2) If there are raindrops on a point, absorb water into the point
 // 3a) Calculate the number of raindrops that will next trickle to the
 // lowest neighbor(s)
-void rainAbsorbTrickle(int id, vector<vector<float>> &rain,
-                       vector<vector<float>> &absorb,
-                       vector<vector<float>> &trickle, int &timeSteps,
-                       const float &absRate, float &isDrain,
-                       vector<vector<float>> &nextTrickle,
-                       const vector<vector<int>> &elevation,
-                       vector<vector<vector<vector<int>>>> &neighborsToTrickle,
-                       vector<vector<float>> &tempTrickle, int numThreads) {
-  cout << id << endl;
+void rainAbsorbTrickle(int id) {
   for (int i = id * rain.size() / numThreads;
        i < (id + 1) * rain.size() / numThreads; ++i) {
     for (int j = 0; j < rain[0].size(); ++j) {
+      mtx.lock();
+      cout << "i j" << i << " " << j << endl;
+      mtx.unlock();
       // Add trickle from the previous step
       rain[i][j] += nextTrickle[i][j];
       // Reset the nextTrickle array
@@ -86,16 +99,14 @@ void rainAbsorbTrickle(int id, vector<vector<float>> &rain,
       } else if (rain[i][j] > 0) {
         trickle[i][j] = rain[i][j];
       }
-      pthread_mutex_lock(&mtx);
+      mtx.lock();
       isDrain += trickle[i][j];
-      cout << "Hello id: " << id << endl;
-      pthread_mutex_unlock(&mtx);
+      mtx.unlock();
       // 3b) For each point, use the calculated number of raindrops that will
       // trickle to the lowest neighbor(s) to update the number of raindrops
       // at each lowest neighbor, if applicable.
       // calcTrickle(rain, elevation, trickle, neighborsToTrickle, nextTrickle);
-      calcTrickle(i, j, rain, elevation, trickle, neighborsToTrickle,
-                  tempTrickle);
+      calcTrickle(i, j);
     }
   }
 }
@@ -139,24 +150,20 @@ vector<vector<int>> countNeighbor(int i, int j,
 }
 
 // Calculate the whole time steps needed to drain
-int calcRain(const vector<vector<int>> &elevation,
-             vector<vector<float>> &absorb, int timeSteps, float absRate,
-             struct timespec &start_time, struct timespec &end_time,
-             int numThreads) {
-  int N = elevation.size();
-  vector<vector<float>> rain(
+int calcRain() {
+  rain = vector<vector<float>>(
       N, vector<float>(N, 0)); // Store the current rain on the ground
-  vector<vector<float>> trickle(
+  trickle = vector<vector<float>>(
       N, vector<float>(N, 0)); // Store the trickle of each step
-  vector<vector<float>> nextTrickle(
+  nextTrickle = vector<vector<float>>(
       N,
       vector<float>(N, 0)); // Store the trickle result to be added next round
-  vector<vector<float>> tempTrickle(
+  tempTrickle = vector<vector<float>>(
       N,
       vector<float>(N, 0)); // Store the trickle result to be added next round
-  vector<vector<float>> resetTrickle(
+  resetTrickle = vector<vector<float>>(
       N, vector<float>(N, 0)); // Used for resetting the tempTrickle
-  vector<vector<vector<vector<int>>>> neighborsToTrickle(
+  neighborsToTrickle = vector<vector<vector<vector<int>>>>(
       N, vector<vector<vector<int>>>(N, vector<vector<int>>()));
   for (int i = 0; i < N; ++i) {
     for (int j = 0; j < N; ++j) {
@@ -166,29 +173,29 @@ int calcRain(const vector<vector<int>> &elevation,
   }
   int wholeSteps = 0;
 
-  float isDrain = 1;
+  isDrain = 1;
 
   // Pre create the threads
-  ctpl::thread_pool p(numThreads);  // numThreads threads total in the pool
-  future<void> results[numThreads]; // To join all the threads
+  ctpl::thread_pool p(numThreads); // numThreads threads total in the pool
 
   clock_gettime(CLOCK_MONOTONIC, &start_time);
 
   while (isDrain != 0) {
     isDrain = 0;
+    future<void> results[numThreads]; // To join all the threads
 
     // 1) Receive a new raindrop (if it is still raining) for each point.
     // 2) If there are raindrops on a point, absorb water into the point
     // 3a) Calculate the number of raindrops that will next trickle to the
     // lowest neighbor(s)
+    cout << "----------------------------------" << endl;
     for (int i = 0; i < numThreads; i++) {
-      results[i] = p.push(rainAbsorbTrickle, rain, absorb, trickle, timeSteps,
-                          absRate, isDrain, nextTrickle, elevation,
-                          neighborsToTrickle, tempTrickle, numThreads);
+      results[i] = p.push(rainAbsorbTrickle);
     }
     for (int i = 0; i < numThreads; i++) {
       results[i].wait(); // synchronize all threads
     }
+    cout << "----------------------------------" << endl;
     nextTrickle = tempTrickle;
     tempTrickle = resetTrickle;
     --timeSteps;

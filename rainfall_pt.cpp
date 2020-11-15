@@ -2,11 +2,31 @@
 #include <bits/stdc++.h>
 // Thread Pool Library for c++
 #include "ctpl_stl.h"
-#include <pthread.h>
-
-pthread_mutex_t mtx = PTHREAD_MUTEX_INITIALIZER;
 
 using namespace std;
+
+mutex mtx; // locks access to counter
+
+// Declaration of variables
+int numThreads;
+int timeSteps;
+float absRate;
+int N;
+string elevation_file;
+float runtime;
+vector<vector<int>> elevation;
+vector<vector<float>> absorb;
+struct timespec start_time, end_time;
+int wholeSteps;                // Store the whole timesteps
+vector<vector<float>> rain;    // Store the current rain on the ground
+vector<vector<float>> trickle; // Store the trickle of each step
+vector<vector<float>>
+    nextTrickle; // Store the trickle result to be added next round
+vector<vector<float>>
+    tempTrickle; // Store the trickle result to be added next round
+vector<vector<float>> resetTrickle; // Used for resetting the tempTrickle
+vector<vector<vector<vector<int>>>> neighborsToTrickle;
+float isDrain;
 
 int main(int argc, char *argv[]) {
   if (argc != 6) {
@@ -35,16 +55,14 @@ int main(int argc, char *argv[]) {
   }
 
   // Initialization of variables
-  int numThreads = stoi(argv[1]);
-  int timeSteps = stoi(argv[2]);
-  float absRate = stof(argv[3]);
-  int N = stoi(argv[4]);
-  string elevation_file = argv[5];
-  float runtime;
-  vector<vector<int>> elevation(N, vector<int>());
-  vector<vector<float>> absorb(N, vector<float>(N, 0));
-  struct timespec start_time, end_time;
-  int wholeSteps = 0; // Store the whole timesteps
+  numThreads = stoi(argv[1]);
+  timeSteps = stoi(argv[2]);
+  absRate = stof(argv[3]);
+  N = stoi(argv[4]);
+  elevation_file = argv[5];
+  elevation = vector<vector<int>>(N, vector<int>());
+  absorb = vector<vector<float>>(N, vector<float>(N, 0));
+  wholeSteps = 0; // Store the whole timesteps
 
   // open the file to read.
   fstream in("./" + elevation_file);
@@ -68,8 +86,7 @@ int main(int argc, char *argv[]) {
   }
 
   // Calculate the whole time steps needed to drain
-  wholeSteps = calcRain(elevation, absorb, timeSteps, absRate, start_time,
-                        end_time, numThreads);
+  wholeSteps = calcRain();
 
   float elapsed_ns = calc_time(start_time, end_time);
   cout << "Rainfall simulation took " << wholeSteps
