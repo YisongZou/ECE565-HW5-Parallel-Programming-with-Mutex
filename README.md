@@ -1,10 +1,13 @@
 # ECE565-HW5-Parallel-Programming-with-Pthreads
+```
 The Thread Pool that we used:https://github.com/vit-vit/CTPL, we include the library in rainfall_pt.cpp and use it to pre create threads
+```
 
+```
 Sequential Version: rainfall_seq
 Parallel Version: rainfall_pt
+```
 
-ECE565 homwork 5
 ```
 Check Script - Usage: ./check.py [dimension] [validation file] [output file]
 Test 4x4 Input & Output (./rainfall [P] 10 0.25 4 sample_4x4.in)
