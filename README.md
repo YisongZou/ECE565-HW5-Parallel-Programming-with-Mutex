@@ -1,7 +1,7 @@
 # ECE565-HW5-Parallel-Programming-with-Pthreads
 ```
-The Thread Pool that we used:https://github.com/vit-vit/CTPL, we include
-the library in rainfall_pt.cpp and use it to pre create threads
+The **Thread** Pool that we used: **https://github.com/vit-vit/CTPL**, we include
+the library: **ctpl_stl.h** in **rainfall_pt.cpp** and use it to pre create threads
 ```
 
 ```
