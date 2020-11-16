@@ -32,7 +32,7 @@ bool notDrain;
 
 int main(int argc, char *argv[]) {
   if (argc != 6) {
-    cout << "Syntax: ./rainfall_seq <P> <M> <A> <N> <elevation_file>" << endl;
+    cout << "Syntax: ./rainfall_pt <P> <M> <A> <N> <elevation_file>" << endl;
     cout << "P = # of parallel threads to use." << endl;
     cout << "M = # of simulation time steps during which a rain drop will "
             "fall "

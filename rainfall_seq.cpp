@@ -4,8 +4,10 @@
 using namespace std;
 
 int main(int argc, char *argv[]) {
-  if (argc != 5) {
-    cout << "Syntax: ./rainfall_seq <M> <A> <N> <elevation_file>" << endl;
+  if (argc != 6) {
+    cout << "Syntax: ./rainfall_seq <P> <M> <A> <N> <elevation_file>" << endl;
+    cout << "P = you can ignore this for seqlential version, input any value"
+         << endl;
     cout << "M = # of simulation time steps during which a rain drop will "
             "fall "
             "on each landscape"
@@ -29,10 +31,10 @@ int main(int argc, char *argv[]) {
   }
 
   // Initialization of variables
-  int timeSteps = stoi(argv[1]);
-  float absRate = stof(argv[2]);
-  int N = stoi(argv[3]);
-  string elevation_file = argv[4];
+  int timeSteps = stoi(argv[2]);
+  float absRate = stof(argv[3]);
+  int N = stoi(argv[4]);
+  string elevation_file = argv[5];
   float runtime;
   vector<vector<int>> elevation(N, vector<int>());
   vector<vector<float>> absorb(N, vector<float>(N, 0));
