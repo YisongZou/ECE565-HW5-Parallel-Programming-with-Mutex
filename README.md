@@ -10,7 +10,7 @@ Sequential Version: rainfall_seq
 Time for 4096x4096: 259.656s
 
 Parallel Version: rainfall_pt
-Time for 4096x4096: 163.479s(8 threads)
+Time for 4096x4096: 161.941s(8 threads)
 ```
 
 ```
