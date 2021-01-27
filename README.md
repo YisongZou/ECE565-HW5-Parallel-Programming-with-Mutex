@@ -1,4 +1,4 @@
-# ECE565-HW5-Parallel-Programming-with-Pthreads
+# ECE565-HW5-Parallel-Programming-with-M
 ```
 The Thread Pool that we used: https://github.com/vit-vit/CTPL
 We include the library: ctpl_stl.h in rainfall_pt.cpp
